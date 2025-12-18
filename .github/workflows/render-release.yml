@@ -56,4 +56,4 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Documentation ${{ steps.tag.outputs.tag }}
-          files: build/pdf/*.pdf
+          files: build/*.pdf

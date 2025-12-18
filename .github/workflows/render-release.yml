@@ -1,0 +1,59 @@
+name: Build LaTeX Docs & Release
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - "docs/**"
+      - "includes/**"
+      - "Makefile"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            make \
+            texlive-latex-base \
+            texlive-latex-recommended \
+            texlive-latex-extra \
+            texlive-fonts-recommended
+
+      - name: Build PDF documentation
+        run: make
+
+      - name: Generate incremental tag
+        id: tag
+        run: |
+          git fetch --tags
+          LAST_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+
+          if [ -z "$LAST_TAG" ]; then
+            NEXT_TAG="v1"
+          else
+            NUM=${LAST_TAG#v}
+            NEXT_TAG="v$((NUM+1))"
+          fi
+
+          git tag "$NEXT_TAG"
+          git push origin "$NEXT_TAG"
+          echo "tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Documentation ${{ steps.tag.outputs.tag }}
+          files: build/pdf/*.pdf
